@@ -44,7 +44,7 @@ MONGO_HOST  = os.environ.get("MONGO_HOST", "192.168.122.36")
 MONGO_PORT  = os.environ.get("MONGO_PORT", "27017")
 AUTH_SOURCE = os.environ.get("AUTH_SOURCE", "admin")
 
-VULNERABLE = True          # <-- esta aplicacion es la vulnerable
+VULNERABLE = True          
 HIDDEN_DBS = {"local", "config"}
 LIMIT = 300
 

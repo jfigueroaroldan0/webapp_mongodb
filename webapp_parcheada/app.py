@@ -44,7 +44,7 @@ MONGO_HOST  = os.environ.get("MONGO_HOST", "192.168.122.36")
 MONGO_PORT  = os.environ.get("MONGO_PORT", "27017")
 AUTH_SOURCE = os.environ.get("AUTH_SOURCE", "admin")
 
-VULNERABLE = False         # <-- esta aplicacion es la segura (parcheada)
+VULNERABLE = False         
 HIDDEN_DBS = {"local", "config"}
 LIMIT = 300
 
@@ -57,7 +57,6 @@ ADMIN_ROLES = {
 ACTIVE_CLIENTS = {}  # token de sesion -> MongoClient autenticado
 
 
-# ----------------------------------------------------------------- HELPERS ---
 def build_uri(username, password):
     u, p = quote_plus(username), quote_plus(password)
     return f"mongodb://{u}:{p}@{MONGO_HOST}:{MONGO_PORT}/?authSource={AUTH_SOURCE}"
@@ -265,5 +264,4 @@ if __name__ == "__main__":
     print(f"  Mongo: {MONGO_HOST}:{MONGO_PORT}  (authSource={AUTH_SOURCE})")
     print("  El payload de inyeccion NO funciona en esta version.")
     print("=" * 60)
-    # Puerto 5001 para poder ejecutarla junto a la version vulnerable (5000).
     app.run(debug=True, host="127.0.0.1", port=5001)
