@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Webapp MongoDB{% endblock %}
+
+{% block body %}
+<div class="navbar">
+  <div class="brand"><span class="logo">JF</span> Webapp MongoDB Jesús Figueroa Roldán</div>
+  <div class="nav-right">
+    <span class="nav-user">Mongo: <b>{{ user.username }}</b></span>
+    <span class="badge {{ 'admin' if user.is_admin else 'user' }}">
+      {{ user.roles|join(', ') if user.roles else 'sin roles' }}
+    </span>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('logout') }}">Salir</a>
+  </div>
+</div>
+
+{% if vulnerable %}
+  <div class="mode-banner vuln">MODO VULNERABLE &mdash; buscador expuesto a inyeccion NoSQL ($where)</div>
+{% else %}
+  <div class="mode-banner safe">MODO SEGURO &mdash; buscador parcheado</div>
+{% endif %}
+
+<div class="container">
+
+  <div class="crumbs">
+    <a href="{{ url_for('dashboard') }}">Servidor</a>
+    {% if dbname %} <span>/</span> <a href="{{ url_for('dashboard', db=dbname) }}">{{ dbname }}</a>{% endif %}
+    {% if colname %} <span>/</span> <b>{{ colname }}</b>{% endif %}
+  </div>
+
+  {% if error %}
+    <div class="flash danger" style="margin-bottom:18px">{{ error }}</div>
+  {% endif %}
+
+  {# NIVEL 1: bases de datos #}
+  {% if databases is not none %}
+    <div class="page-head"><div><h2>Bases de datos</h2>
+      <p>Lo que tu cuenta de Mongo puede ver en el servidor.</p></div></div>
+    {% if databases %}
+      <div class="grid">
+        {% for d in databases %}
+        <a class="doc-card tile" href="{{ url_for('dashboard', db=d) }}">
+          <span class="cat">base de datos</span><h3>{{ d }}</h3>
+        </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">Tu cuenta no tiene visibilidad sobre ninguna base de datos.</div>
+    {% endif %}
+
+  {# NIVEL 2: colecciones #}
+  {% elif collections is not none %}
+    <div class="page-head"><div><h2>Colecciones de <span class="mono">{{ dbname }}</span></h2></div></div>
+    {% if collections %}
+      <div class="grid">
+        {% for c in collections %}
+        <a class="doc-card tile" href="{{ url_for('dashboard', db=dbname, col=c) }}">
+          <span class="cat">coleccion</span><h3>{{ c }}</h3>
+        </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">Esta base de datos no tiene colecciones visibles para ti.</div>
+    {% endif %}
+
+  {# NIVEL 3: documentos #}
+  {% elif docs is not none %}
+    <div class="page-head">
+      <div><h2><span class="mono">{{ colname }}</span></h2>
+        <p>Documentos reales (mostrando hasta {{ docs|length }}).</p></div>
+      <button class="btn btn-primary" style="width:auto;margin:0" onclick="openCreate()">+ Insertar documento</button>
+    </div>
+
+    <form method="get" action="{{ url_for('dashboard') }}" style="display:flex;gap:10px;margin-bottom:22px">
+      <input type="hidden" name="db" value="{{ dbname }}">
+      <input type="hidden" name="col" value="{{ colname }}">
+      <input type="text" name="q" value="{{ q }}" placeholder="Buscar en los documentos..." autocomplete="off" style="flex:1">
+      <button type="submit" class="btn btn-ghost" style="width:auto">Buscar</button>
+      {% if q %}<a class="btn btn-ghost" style="width:auto" href="{{ url_for('dashboard', db=dbname, col=colname) }}">Limpiar</a>{% endif %}
+    </form>
+
+    {% if docs %}
+    <div class="doc-list">
+      {% for doc in docs %}
+      <div class="doc-card">
+        <div class="doc-id">_id: <b>{{ doc.id }}</b></div>
+        <pre class="doc-json">{{ doc.json }}</pre>
+        <div class="doc-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openEdit({{ doc.id|tojson }}, {{ doc.json|tojson }})">Editar</button>
+          <form method="post" action="{{ url_for('delete_document') }}" onsubmit="return confirm('Borrar este documento?')">
+            <input type="hidden" name="db" value="{{ dbname }}">
+            <input type="hidden" name="col" value="{{ colname }}">
+            <input type="hidden" name="id" value="{{ doc.id }}">
+            <button type="submit" class="btn btn-danger btn-sm">Borrar</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <div class="empty">No hay documentos que mostrar.</div>
+    {% endif %}
+  {% endif %}
+
+</div>
+
+{% if docs is not none %}
+<div class="modal-backdrop" id="createModal">
+  <div class="modal">
+    <h3>Insertar documento</h3>
+    <p class="sub">Escribe el documento en JSON. Se inserta en <span class="mono">{{ dbname }}.{{ colname }}</span>.</p>
+    <form method="post" action="{{ url_for('create_document') }}">
+      <input type="hidden" name="db" value="{{ dbname }}">
+      <input type="hidden" name="col" value="{{ colname }}">
+      <textarea name="json" rows="8" style="font-family:monospace">{
+  "equipo": "",
+  "liga": ""
+}</textarea>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('createModal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Insertar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="editModal">
+  <div class="modal">
+    <h3>Editar documento</h3>
+    <p class="sub">El <span class="mono">_id</span> no se modifica.</p>
+    <form method="post" action="{{ url_for('update_document') }}">
+      <input type="hidden" name="db" value="{{ dbname }}">
+      <input type="hidden" name="col" value="{{ colname }}">
+      <input type="hidden" name="id" id="edit-id">
+      <textarea name="json" id="edit-json" rows="10" style="font-family:monospace"></textarea>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('editModal')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function openCreate() { document.getElementById('createModal').classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+  function openEdit(id, jsonText) {
+    document.getElementById('edit-id').value = id;
+    document.getElementById('edit-json').value = jsonText;
+    document.getElementById('editModal').classList.add('open');
+  }
+  document.querySelectorAll('.modal-backdrop').forEach(function (bd) {
+    bd.addEventListener('click', function (e) { if (e.target === bd) bd.classList.remove('open'); });
+  });
+</script>
+{% endblock %}

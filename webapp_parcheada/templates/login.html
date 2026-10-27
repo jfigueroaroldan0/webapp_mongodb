@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Entrar - Webappt{% endblock %}
+
+{% block body %}
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">DV</div>
+    <h1>Webapp MongoDB</h1>
+    <p class="sub">Explorador del servidor MongoDB</p>
+
+    <form method="post" action="{{ url_for('login') }}">
+      <label for="username">Usuario de Mongo</label>
+      <input type="text" id="username" name="username" autocomplete="off" required>
+
+      <label for="password">Contrasena</label>
+      <input type="password" id="password" name="password" required>
+
+      <button type="submit" class="btn btn-primary">Conectar</button>
+    </form>
+
+    {% if vulnerable %}
+    <div class="hint">
+      <b>Modo vulnerable.</b> Entras con tu cuenta real de Mongo y ves lo que tus
+      permisos permitan. El <b>buscador</b> es inyectable ($where): prueba
+      <code>x') >= 0 || true || ('</code> para forzar que devuelva todo.
+    </div>
+    {% else %}
+    <div class="hint">
+      <b>Modo seguro.</b> El buscador no construye consultas con tu texto; la
+      inyeccion NoSQL no funciona.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
